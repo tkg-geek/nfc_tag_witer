@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFCタグ書き込みツール</title>
+    <style>
+        :root {
+            --primary-color: #4a6cfa;
+            --accent-color: #5e7bff;
+            --text-color: #333;
+            --light-bg: #f8f9fa;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; 
+            max-width: 500px; 
+            margin: 0 auto; 
+            padding: 20px;
+            color: var(--text-color);
+            background-color: #fff;
+            line-height: 1.6;
+        }
+        
+        .container {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        input { 
+            width: 100%; 
+            padding: 12px 15px; 
+            margin: 12px 0; 
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 108, 250, 0.15);
+        }
+        
+        button { 
+            width: 100%;
+            padding: 14px; 
+            margin: 15px 0; 
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        
+        button:hover {
+            background-color: var(--accent-color);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        #status {
+            background-color: var(--light-bg);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 15px;
+            text-align: center;
+        }
+        
+        .success {
+            background-color: rgba(40, 167, 69, 0.15);
+            color: var(--success-color);
+        }
+        
+        .error {
+            background-color: rgba(220, 53, 69, 0.15);
+            color: var(--error-color);
+        }
+        
+        .waiting {
+            background-color: rgba(74, 108, 250, 0.15);
+            color: var(--primary-color);
+        }
+        
+        .icon {
+            font-size: 3rem;
+            display: block;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📱</div>
+        <h1>NFCタグ書き込みツール</h1>
+        <input 
+            type="url" 
+            id="nfcData" 
+            placeholder="書き込むURLを入力 (例: https://example.com)"
+        >
+        <button onclick="writeToNFCTag()">NFCタグに書き込む</button>
+        <div id="status">NFCタグへのURLの書き込みを待機中...</div>
+    </div>
+
+    <script>
+        async function writeToNFCTag() {
+            const urlInput = document.getElementById('nfcData');
+            const statusDiv = document.getElementById('status');
+            
+            // リセット
+            statusDiv.className = '';
+            
+            // URLの検証
+            if (!urlInput.value.trim()) {
+                statusDiv.textContent = 'URLを入力してください';
+                statusDiv.className = 'error';
+                return;
+            }
+            
+            try {
+                // URLが有効かチェック
+                new URL(urlInput.value);
+            } catch (e) {
+                statusDiv.textContent = '有効なURLを入力してください (例: https://example.com)';
+                statusDiv.className = 'error';
+                return;
+            }
+
+            if ('NDEFReader' in window) {
+                try {
+                    statusDiv.textContent = 'NFCタグをデバイスにかざしてください...';
+                    statusDiv.className = 'waiting';
+                    
+                    const ndef = new NDEFReader();
+                    await ndef.scan();
+                    
+                    // URLレコードを作成（自動的にWebサイトを開くように）
+                    await ndef.write({
+                        records: [{
+                            recordType: "url",
+                            data: urlInput.value
+                        }]
+                    });
+                    
+                    statusDiv.textContent = '✅ URLをNFCタグに書き込みました！タッチするとブラウザが開きます';
+                    statusDiv.className = 'success';
+                } catch (error) {
+                    console.error('NFC書き込みエラー:', error);
+                    statusDiv.textContent = `⚠️ エラー: ${error.message}`;
+                    statusDiv.className = 'error';
+                }
+            } else {
+                statusDiv.textContent = '⚠️ このブラウザはWeb NFCに対応していません';
+                statusDiv.className = 'error';
+            }
+        }
+    </script>
+</body>
+</html>
